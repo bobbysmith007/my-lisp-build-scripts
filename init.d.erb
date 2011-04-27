@@ -1,0 +1,98 @@
+#! /bin/bash
+### BEGIN INIT INFO
+# Provides:          <%=application%>
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Example initscript
+# Description:       This file should be used to construct scripts to be
+#                    placed in /etc/init.d.
+### END INIT INFO
+
+# Author: Acceleration Programmers <programmers@acceleration.net>
+
+# Do NOT "set -e"
+
+#We're going to use UTF-8.
+LC_CTYPE=en_US.UTF-8
+export LC_CTYPE
+
+export SBCL_HOME=/usr/local/lib/sbcl
+export LIVE_SERVER=<%=liveserver%>
+
+RUN_AS=<%=run_as%>
+APPNAME="<%=application%>"
+# these must be an absolute pathnames
+UCWROOT="<%=current_path%>"
+CONFIGFILE="$UCWROOT/conf.lisp"
+LOGROOT="<%=logroot%>"
+LOGFILE="$LOGROOT/${APPNAME}.dribble"
+BINARY="$UCWROOT/bin/${APPNAME}"
+PIDFILE="/var/run/$APPNAME.pid"
+
+SBCL_OPT="--noinform --lose-on-corruption --disable-ldb --end-runtime-options --disable-debugger --end-toplevel-options"
+
+pid_cleanup() {
+    #check and cleanup after dead process if need be.
+    if [ -e $PIDFILE ] && [ ! -e /proc/`cat $PIDFILE` ]; then
+	rm -f $PIDFILE
+    fi
+}
+
+pid_cleanup
+
+# the help output
+help ()
+{
+    cat <<EOF
+Commands:
+  start              Start $APPNAME
+  stop               Shutdown $APPNAME
+  restart            Stop then start
+  kill               Hard kill the process
+
+PID:         `[ -e $PIDFILE ] && cat $PIDFILE`
+PIDFILE:     $PIDFILE
+BINARY:      $BINARY
+LOGROOT:     $LOGROOT
+LIVE_SERVER: $LIVE_SERVER
+EOF
+}
+
+#whenever interacting with start-stop-daemon, 
+#make sure we have the pidfile and appname specified
+#/proc/<id>/stat trims to 15 charcters.
+SSD_BASE="start-stop-daemon -p $PIDFILE -n ${APPNAME:0:15}"
+
+case "$1" in
+    'start')
+	mkdir -p $LOGROOT
+	cd $UCWROOT
+
+	$SSD_BASE -b -m -a $BINARY \
+	    -d $UCWROOT -c $RUN_AS \
+	    -S -- $SBCL_OPT
+
+	#screen -dmS $APPNAME sudo -u $RUN_AS $BINARY
+    ;;
+    'stop')
+	#screen -S $APPNAME -p 0 -X kill
+	$SSD_BASE -K -R 30
+	pid_cleanup
+    ;;
+    'restart'|'force-reload')
+	$0 stop
+	sleep 1
+	$0 start
+    ;;
+    'kill')
+	$SSD_BASE -K -s KILL
+	pid_cleanup
+     ;;
+    *)
+	help
+	;;
+esac
+
+exit 0
