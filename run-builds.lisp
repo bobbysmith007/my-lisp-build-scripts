@@ -80,7 +80,7 @@
 (defun load-system (system)
   ;; to be run in the remote version
   (with-load-system-error-handling ()
-    (asdf:oos 'asdf:load-op system)))
+    (asdf:load-system system)))
 
 (defun test-system (system)
   ;; to be run in the remote version
