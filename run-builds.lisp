@@ -59,8 +59,7 @@
 		      (type-of c)
 		      c c
 		      (compute-restarts)
-		      recompile-count retry-count)
-	      (quit :unix-status 1)))
+		      recompile-count retry-count)))
        (handler-bind
 	   ((asdf:missing-dependency
 	     (lambda (c)
