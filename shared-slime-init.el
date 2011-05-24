@@ -14,11 +14,12 @@
 ;(push "L:/slime/contrib" load-path)
 
 (require 'slime)
-(slime-setup '(slime-presentation-streams
-               slime-fancy slime-asdf
-               slime-tramp slime-indentation
-               slime-compiler-notes-tree
-               slime-sprof))
+(slime-setup
+ '(slime-presentation-streams
+   slime-fancy slime-asdf
+   slime-tramp slime-indentation
+   slime-compiler-notes-tree
+   slime-sprof))
 
 
 ;;;;Functions for startin a lisp
@@ -36,14 +37,7 @@
 		("\.asd$" . lisp-mode)
 		("\.system$" . lisp-mode)) auto-mode-alist))
 
-;; Hooks into lisp mode
-(add-hook 'lisp-mode-hook
-	  (lambda () (slime-mode t)))
-
-(add-hook 'inferior-lisp-mode-hook
-	  (lambda () (inferior-slime-mode t)))
-
-
+(add-hook 'inferior-lisp-mode-hook (lambda () (inferior-slime-mode t)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -54,7 +48,8 @@
 ;;some slime settings
 (setq
       ;common-lisp-hyperspec-root "file:///L:/HyperSpec/HyperSpec/"
-      lisp-indent-function 'cl-indent:function
+      ;lisp-indent-function 'cl-indent:function
+      lisp-indent-function 'common-lisp-indent-function
       slime-complete-symbol-function 'slime-fuzzy-complete-symbol
       slime-startup-animation t
       slime-repl-return-behaviour :send-only-if-after-complete)
@@ -179,13 +174,6 @@
 (define-key slime-fuzzy-completions-map (kbd "SPC") 'slime-fuzzy-select-and-space)
 
 
-; fix [] in slime
-(add-hook 'lisp-mode-hook
-	  (lambda ()
-	    (slime-mode t)
-	    (modify-syntax-entry ?\[ "(]  " lisp-mode-syntax-table)
-	    (modify-syntax-entry ?\] ")[  " lisp-mode-syntax-table)))
-
 
 
 (defun shared-lisp-map-remote (map) (car map))
@@ -249,4 +237,62 @@
                         (substring remote-filename
                                    (length (shared-lisp-map-remote the-map)))))))
       slime-filename-translations)
+
+;; code indentation & style conventions
+(define-common-lisp-style "ADW"
+    ;; Style used in SBCL sources. A good general purpose style.
+    (:inherit "sbcl")
+  (:eval (whitespace-mode 1))
+  (:variables
+   (lisp-lambda-list-keyword-alignment nil)
+   (lisp-lambda-list-keyword-parameter-alignment nil)
+   (lisp-lambda-list-keyword-parameter-indentation 0)
+   (lisp-backquote-indentation nil)
+   (whitespace-style (tabs trailing))
+   (indent-tabs-mode nil)
+   (comment-fill-column nil)
+   (fill-column 78))
+  (:indentation
+   ;; bind clauses need this specification to indent correctly
+   (:function  ((&whole 1 &lambda &body)))
+   (:macro     (as :function))
+   (:macrolet  (as :function))
+   (:labels    (as :function))
+   (:flet      (as :function))
+   (aif (as if))
+   (awhen (as when))
+   (acond (as cond))
+))
+
+;; This is usually buffer local, but setting it seems to allow
+;; this to be the default value for file local variables
+(set 'common-lisp-style 'ADW)
+
+(defun create-adw-syntax-table ()
+  ;; make a new syntax table based of the lisp mode table
+  (let ((tbl (make-syntax-table lisp-mode-syntax-table)))
+    ;; treat /as a string delimiter/ for cl-ppcre regex support
+    (modify-syntax-entry ?/ "\"" tbl)
+    ;; treat preceding ? marks the same way we treat quote
+    ;; (this allows us to skip over interpolated strings as a single sexp)
+    (modify-syntax-entry ?? "'" tbl)
+    ;; [ is like an opening paren but matches ]
+    ;; ] is like a closing parent but matches [
+    (modify-syntax-entry ?\[ "(]  " tbl)
+    (modify-syntax-entry ?\] ")[  " tbl)
+    tbl))
+
+;; Hooks into lisp mode
+(defun adw-lisp-mode-hook ()
+  (slime-mode t)
+  ;; ensure that our syntax table is used.
+  ;; I chose to do that as a function so any late changes to the
+  ;; lisp-mode-syntax-table would be incorporated.  Doesnt really seem
+  ;; to slow anything down
+  (let ((tbl (create-adw-syntax-table)))
+    (set-syntax-table tbl)
+    (setf font-lock-syntax-table tbl)))
+
+(add-hook 'lisp-mode-hook #'adw-lisp-mode-hook)
+
 
