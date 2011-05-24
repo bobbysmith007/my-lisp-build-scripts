@@ -271,11 +271,13 @@
 (defun create-adw-syntax-table ()
   ;; make a new syntax table based of the lisp mode table
   (let ((tbl (make-syntax-table lisp-mode-syntax-table)))
-    ;; treat /as a string delimiter/ for cl-ppcre regex support
-    (modify-syntax-entry ?/ "\"" tbl)
     ;; treat preceding ? marks the same way we treat quote
     ;; (this allows us to skip over interpolated strings as a single sexp)
-    (modify-syntax-entry ?? "'" tbl)
+    (modify-syntax-entry ?? "'   p" tbl)
+
+    ;; treat /as a string delimiter/ for cl-ppcre regex support
+    ;(modify-syntax-entry ?/ "\" ?// " tbl)
+
     ;; [ is like an opening paren but matches ]
     ;; ] is like a closing parent but matches [
     (modify-syntax-entry ?\[ "(]  " tbl)
