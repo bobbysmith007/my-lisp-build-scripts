@@ -269,31 +269,26 @@
 (set 'common-lisp-style 'ADW)
 
 (defun create-adw-syntax-table ()
-  ;; make a new syntax table based of the lisp mode table
-  (let ((tbl (make-syntax-table lisp-mode-syntax-table)))
-    ;; treat preceding ? marks the same way we treat quote
-    ;; (this allows us to skip over interpolated strings as a single sexp)
-    (modify-syntax-entry ?? "'   p" tbl)
+  ;; make a new syntax table based of the lisp mode table  
+  ;; treat preceding ? marks the same way we treat quote
+  ;; (this allows us to skip over interpolated strings as a single sexp)
+  (modify-syntax-entry ?? "'   p")
 
-    ;; treat /as a string delimiter/ for cl-ppcre regex support
-    ;(modify-syntax-entry ?/ "\" ?// " tbl)
+  ;; treat /as a string delimiter/ for cl-ppcre regex support
+  ;;(modify-syntax-entry ?/ "\" ?// " tbl)
 
-    ;; [ is like an opening paren but matches ]
-    ;; ] is like a closing parent but matches [
-    (modify-syntax-entry ?\[ "(]  " tbl)
-    (modify-syntax-entry ?\] ")[  " tbl)
-    tbl))
+  ;; [ is like an opening paren but matches ]
+  ;; ] is like a closing parent but matches [
+  (modify-syntax-entry ?\[ "(]  ")
+  (modify-syntax-entry ?\] ")[  "))
 
 ;; Hooks into lisp mode
 (defun adw-lisp-mode-hook ()
   (slime-mode t)
-  ;; ensure that our syntax table is used.
-  ;; I chose to do that as a function so any late changes to the
-  ;; lisp-mode-syntax-table would be incorporated.  Doesnt really seem
-  ;; to slow anything down
-  (let ((tbl (create-adw-syntax-table)))
-    (set-syntax-table tbl)
-    (setf font-lock-syntax-table tbl)))
+  ;; ensure that our syntax table is used. we used to copy then set 
+  ;; to our copy but that seemed error prone, lets just stomp the current
+  ;; syntax table instead
+  (create-adw-syntax-table))
 
 (add-hook 'lisp-mode-hook #'adw-lisp-mode-hook)
 
